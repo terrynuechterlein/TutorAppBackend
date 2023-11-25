@@ -6,6 +6,6 @@
         public string? Bio { get; set; }
         public string? Website { get; set; }
         public string? School { get; set; }
-        public int Grade { get; set; }
+        public string? Grade { get; set; }
     }
 }
