@@ -12,6 +12,7 @@ namespace TutorAppBackend.Models
         public string? School { get; set; }
         public string? Grade { get; set; }
         public string? ProfilePictureUrl { get; set; }
+        public string? BannerImageUrl { get; set; }
         public bool IsTutor { get; set; }
         public int ClassYear { get; set; }
         public int Popularity { get; set; }

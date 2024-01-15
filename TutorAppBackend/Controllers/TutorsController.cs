@@ -11,6 +11,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 
 
 [ApiController]
@@ -64,7 +67,11 @@ public class TutorsController : ControllerBase
         var identityResult = await _userManager.CreateAsync(user, request.Password);
         if (identityResult.Succeeded)
         {
-            return CreatedAtAction(nameof(GetTutors), user);
+            return CreatedAtAction(nameof(GetTutors), new
+            {
+                userId = user.Id, // Include the user's ID in the response
+                message = "User registered successfully"
+            });
         }
         return BadRequest(identityResult.Errors);
     }
@@ -92,10 +99,15 @@ public class TutorsController : ControllerBase
 
         if (signInResult.Succeeded)
         {
-            // Create the token
-            var token = GenerateJwtToken(user);
+            //create the token
+            var token = GenerateJwtToken(user); 
 
-            return Ok(new { token = token, message = "Logged in successfully" });
+            return Ok(new
+            {
+                token = token,
+                userId = user.Id, // Include the user's ID in the response
+                message = "Logged in successfully"
+            });
         }
 
         return BadRequest(new { message = "Invalid email or password" });
@@ -185,8 +197,7 @@ public class TutorsController : ControllerBase
 
         if (profileImage != null && profileImage.Length > 0)
         {
-            // Save the image and get the URL
-            var imageUrl = await SaveImage(profileImage);
+            var imageUrl = await SaveImageToAzureBlob(profileImage, "profileimages");
             user.ProfilePictureUrl = imageUrl;
             _context.Update(user);
             await _context.SaveChangesAsync();
@@ -197,22 +208,46 @@ public class TutorsController : ControllerBase
         return BadRequest("Invalid image file");
     }
 
-    private async Task<string> SaveImage(IFormFile profileImage)
+    // POST: api/tutors/{id}/uploadBannerImage
+    [HttpPost("{id}/uploadBannerImage")]
+    public async Task<IActionResult> UploadBannerImage(string id, [FromForm] IFormFile bannerImage)
     {
-        var uploadsFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-        if (!Directory.Exists(uploadsFolderPath))
-            Directory.CreateDirectory(uploadsFolderPath);
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
 
-        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(profileImage.FileName);
-        var filePath = Path.Combine(uploadsFolderPath, fileName);
+        if (bannerImage != null && bannerImage.Length > 0)
+        {
+            var imageUrl = await SaveImageToAzureBlob(bannerImage, "bannerimages");
+            user.BannerImageUrl = imageUrl; 
+            _context.Update(user);
+            await _context.SaveChangesAsync();
 
-        await using var stream = new FileStream(filePath, FileMode.Create);
-        await profileImage.CopyToAsync(stream);
+            return Ok(new { message = "Banner image updated successfully" });
+        }
 
-        return filePath;
+        return BadRequest("Invalid image file");
     }
 
-    // Inside TutorsController
+    private async Task<string> SaveImageToAzureBlob(IFormFile imageFile, string containerName)
+    {
+        var connectionString = _configuration["AzureStorage:ConnectionString"];
+        var blobServiceClient = new BlobServiceClient(connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+        var blobName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+        var blobClient = containerClient.GetBlobClient(blobName);
+
+        await using (var stream = imageFile.OpenReadStream())
+        {
+            await blobClient.UploadAsync(stream, true);
+        }
+
+        return blobClient.Uri.ToString();
+    }
+
 
     [HttpGet("validateToken")]
     public IActionResult ValidateToken()
@@ -245,6 +280,70 @@ public class TutorsController : ControllerBase
         return Ok(new { message = "Profile updated successfully" });
     }
 
+    private string GenerateBlobSasToken(string containerName, string blobName)
+    {
+        var blobServiceClient = new BlobServiceClient(_configuration["AzureStorage:ConnectionString"]);
+        var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+        var blobClient = containerClient.GetBlobClient(blobName);
+
+        var sasBuilder = new BlobSasBuilder
+        {
+            BlobContainerName = containerName,
+            BlobName = blobName,
+            Resource = "b", // b for blob
+            StartsOn = DateTime.UtcNow,
+            ExpiresOn = DateTime.UtcNow.AddHours(24) // Token valid for 24 hours
+        };
+
+        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+        var sasToken = blobClient.GenerateSasUri(sasBuilder).Query;
+
+        return $"{blobClient.Uri}{sasToken}";
+    }
+
+
+    [HttpGet("{id}/profileImage")]
+    public async Task<IActionResult> GetProfileImageUrl(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrEmpty(user.ProfilePictureUrl))
+        {
+            return Ok(new { imageUrl = "" });
+        }
+
+        var uri = new Uri(user.ProfilePictureUrl);
+        var blobName = Path.GetFileName(uri.LocalPath);
+        var sasUrl = GenerateBlobSasToken("profileimages", blobName);
+
+        return Ok(new { imageUrl = sasUrl });
+    }
+
+    [HttpGet("{id}/bannerImage")]
+    public async Task<IActionResult> GetBannerImageUrl(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrEmpty(user.BannerImageUrl))
+        {
+            return Ok(new { imageUrl = "" });
+        }
+
+        var uri = new Uri(user.BannerImageUrl);
+        var blobName = Path.GetFileName(uri.LocalPath);
+        var sasUrl = GenerateBlobSasToken("bannerimages", blobName);
+
+        return Ok(new { imageUrl = sasUrl });
+    }
 
 
 }
