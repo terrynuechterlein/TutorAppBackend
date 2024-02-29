@@ -14,6 +14,9 @@ using Microsoft.Extensions.Configuration;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
+using TutorAppBackend.DTOs;
+using Microsoft.Extensions.Logging; // Make sure to include this using directive
+using Newtonsoft.Json;
 
 
 [ApiController]
@@ -24,14 +27,18 @@ public class TutorsController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<TutorsController> _logger; // Declare the _logger field
 
-    public TutorsController(AppDbContext context, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration)
+
+    public TutorsController(AppDbContext context, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, ILogger<TutorsController> logger)
     {
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
         _configuration = configuration;
         _configuration = configuration;
+        _logger = logger;
+
     }
 
     // GET: api/users/tutors
@@ -152,14 +159,7 @@ public class TutorsController : ControllerBase
         await _context.SaveChangesAsync();
         return NoContent();
     }
-
-    [HttpGet("search")]
-    public ActionResult<IEnumerable<User>> SearchUsers(string name)
-    {
-        var users = _context.User.Where(u => u.FullName != null && u.FullName.Contains(name)).ToList();
-        return users;
-    }
-
+  
     [HttpGet("feed")]
     public ActionResult<IEnumerable<Post>> GetUserFeed(string userId)
     {
@@ -261,6 +261,8 @@ public class TutorsController : ControllerBase
     [HttpPut("{id}/updateProfile")]
     public async Task<IActionResult> UpdateProfile(string id, [FromBody] UpdateUserRequest request)
     {
+        _logger.LogInformation($"UpdateProfile called for user ID {id} with request: {JsonConvert.SerializeObject(request)}");
+
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
@@ -268,16 +270,40 @@ public class TutorsController : ControllerBase
         }
 
         // Update the user properties
-        user.Name = request.Name;
-        user.Bio = request.Bio;
-        user.Website = request.Website;
-        user.School = request.School;
-        user.Grade = request.Grade;
+        if (request.UserName != null) user.UserName = request.UserName;
+        if (request.Major != null) user.Major = request.Major;
+        if (request.Website != null) user.Website = request.Website;
+        if (request.School != null) user.School = request.School;
+        if (request.Grade != null) user.Grade = request.Grade;
+        if (request.FirstName != null) user.FirstName = request.FirstName;
+        if (request.LastName != null) user.LastName = request.LastName;
 
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Profile updated successfully" });
+    }
+
+    // PUT: api/tutors/{id}/initialSetup
+    [HttpPut("{id}/initialSetup")]
+    public async Task<IActionResult> InitialSetup(string id, [FromBody] InitialSetupRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        user.FirstName = request.FirstName;
+        user.LastName = request.LastName;
+        user.School = request.School;
+        user.Major = request.Major;
+
+        user.IsSetupComplete = true; // Mark the initial setup as complete
+
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new { message = "Initial setup completed successfully." });
     }
 
     private string GenerateBlobSasToken(string containerName, string blobName)
@@ -343,6 +369,35 @@ public class TutorsController : ControllerBase
         var sasUrl = GenerateBlobSasToken("bannerimages", blobName);
 
         return Ok(new { imageUrl = sasUrl });
+    }
+
+    [HttpGet("{id}/profile")]
+    public async Task<ActionResult<UserProfileDto>> GetUserProfile(string id)
+    {
+        var user = await _context.User.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var userProfileDto = new UserProfileDto
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            Website = user.Website,
+            School = user.School,
+            Grade = user.Grade,
+            Major = user.Major,
+            YoutubeUrl = user.YoutubeUrl,
+            TwitchUrl = user.TwitchUrl,
+            DiscordUrl = user.DiscordUrl,
+            LinkedInUrl = user.LinkedInUrl,
+            IsSetupComplete = user.IsSetupComplete,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+        };
+
+        return Ok(userProfileDto);
     }
 
 
