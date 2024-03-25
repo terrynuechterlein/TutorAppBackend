@@ -11,5 +11,9 @@
         public string? Major { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
+        public string? YoutubeUrl { get; set; }
+        public string? TwitchUrl { get; set; }
+        public string? DiscordUrl { get; set; }
+        public string? LinkedInUrl { get; set; }
     }
 }

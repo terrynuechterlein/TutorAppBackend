@@ -15,9 +15,10 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using TutorAppBackend.DTOs;
-using Microsoft.Extensions.Logging; // Make sure to include this using directive
+using Microsoft.Extensions.Logging; 
 using Newtonsoft.Json;
-
+using System.Net;
+using System.Diagnostics;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -27,7 +28,7 @@ public class TutorsController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<TutorsController> _logger; // Declare the _logger field
+    private readonly ILogger<TutorsController> _logger; 
 
 
     public TutorsController(AppDbContext context, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, ILogger<TutorsController> logger)
@@ -277,6 +278,10 @@ public class TutorsController : ControllerBase
         if (request.Grade != null) user.Grade = request.Grade;
         if (request.FirstName != null) user.FirstName = request.FirstName;
         if (request.LastName != null) user.LastName = request.LastName;
+        if (request.YoutubeUrl != null) user.YoutubeUrl = request.YoutubeUrl;
+        if (request.TwitchUrl != null) user.TwitchUrl = request.TwitchUrl;
+        if (request.DiscordUrl != null) user.DiscordUrl = request.DiscordUrl;
+        if (request.LinkedInUrl != null) user.LinkedInUrl = request.LinkedInUrl;
 
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
@@ -388,6 +393,7 @@ public class TutorsController : ControllerBase
             School = user.School,
             Grade = user.Grade,
             Major = user.Major,
+            Bio = user.Bio,
             YoutubeUrl = user.YoutubeUrl,
             TwitchUrl = user.TwitchUrl,
             DiscordUrl = user.DiscordUrl,
@@ -399,6 +405,105 @@ public class TutorsController : ControllerBase
 
         return Ok(userProfileDto);
     }
+
+    // PUT: api/tutors/{id}/updateBio
+    [HttpPut("{id}/updateBio")]
+    public async Task<IActionResult> UpdateBio(string id, [FromBody] UpdateBioRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        user.Bio = request.Bio;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            return Ok(new { message = "Bio updated successfully." });
+        }
+        return BadRequest("Failed to update bio.");
+    }
+
+    // GET: api/tutors/allUsers
+    [HttpGet("allusers")]
+    public ActionResult<IEnumerable<GetAllUsersDTO>> GetAllUsers(
+            [FromQuery] string[] college,
+            [FromQuery] string[] grade,
+            [FromQuery] string[] major,
+            [FromQuery] string searchQuery = null) 
+
+    {
+        // Log the received filter parameters for debugging
+        _logger.LogInformation($"Received filter parameters. College: {string.Join(", ", college)}, Grade: {string.Join(", ", grade)}, Major: {string.Join(", ", major)}");
+
+        var query = _context.Users.AsQueryable();
+
+        // Filter by college if provided
+        if (college != null && college.Any())
+        {
+            query = query.Where(user => college.Contains(user.School));
+        }
+
+        // Filter by grade if provided
+        if (grade != null && grade.Any())
+        {
+            query = query.Where(user => grade.Contains(user.Grade));
+        }
+
+        // Filter by major if provided
+        if (major != null && major.Any())
+        {
+            query = query.Where(user => major.Contains(user.Major));
+        }
+
+        // New filtering logic for searchQuery
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            query = query.Where(user =>
+                user.FirstName.Contains(searchQuery) ||
+                user.LastName.Contains(searchQuery) ||
+                user.UserName.Contains(searchQuery));
+
+        }
+
+
+        // Fetch the users without generating SAS tokens
+        var users = query.Select(user => new
+        {
+            user.Id,
+            user.FirstName,
+            user.LastName,
+            user.UserName,
+            user.ProfilePictureUrl,
+            user.BannerImageUrl,
+            user.School,
+            user.Grade,
+            user.Major,
+            user.Bio
+        }).ToList(); // Execute the query and materialize results
+
+        // Generate SAS tokens for each user in memory
+        var usersWithSasTokens = users.Select(user => new GetAllUsersDTO
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            UserName = user.UserName,
+            ProfilePictureUrl = user.ProfilePictureUrl != null ? GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(user.ProfilePictureUrl).LocalPath)) : null,
+            BannerImageUrl = user.BannerImageUrl != null ? GenerateBlobSasToken("bannerimages", Path.GetFileName(new Uri(user.BannerImageUrl).LocalPath)) : null,
+            School = user.School,
+            Grade = user.Grade,
+            Major = user.Major,
+            Bio = user.Bio,
+            // FollowersCount and FollowingCount can be added here if needed
+        }).ToList();
+
+        return Ok(usersWithSasTokens);
+    }
+
+
 
 
 }

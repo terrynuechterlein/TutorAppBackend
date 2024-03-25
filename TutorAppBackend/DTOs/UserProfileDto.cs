@@ -8,6 +8,7 @@
         public string? School { get; set; }
         public string? Grade { get; set; }
         public string? Major { get; set; }
+        public string? Bio { get; set; }
         public string? YoutubeUrl { get; set; }
         public string? TwitchUrl { get; set; }
         public string? DiscordUrl { get; set; }
