@@ -23,19 +23,21 @@ namespace TutorAppBackend.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure the relationship for Message -> User (Sender)
+            modelBuilder.Entity<Message>().ToTable("Messages");
+
+            // Message -> Sender
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.Sender)
                 .WithMany()
                 .HasForeignKey(m => m.SenderId)
-                .OnDelete(DeleteBehavior.Cascade); // This allows cascading deletes for the sender
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure the relationship for Message -> User (Receiver)
+            // Message -> Receiver
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.Receiver)
                 .WithMany()
                 .HasForeignKey(m => m.ReceiverId)
-                .OnDelete(DeleteBehavior.Restrict); // This turns off cascading deletes for the receiver
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure the relationship for Comment -> User
             modelBuilder.Entity<Comment>()

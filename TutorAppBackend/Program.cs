@@ -35,6 +35,14 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+
+    // Fetch the JWT key from environment variables directly
+    var jwtKey = Environment.GetEnvironmentVariable("Jwt_Key")
+                 ?? throw new InvalidOperationException("JWT Key is not configured properly.");
+
+    // Ensure you log the key to confirm it's loaded (for debugging only)
+    Console.WriteLine($"JWT Key: {jwtKey}");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -43,7 +51,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
 
@@ -51,7 +59,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(builder =>
     {
-        builder.WithOrigins("http://10.2.1.246:8081") 
+        builder.WithOrigins("http://192.168.1.54:8081") 
                .AllowAnyMethod()
                .AllowAnyHeader();
     });

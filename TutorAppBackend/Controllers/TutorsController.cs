@@ -73,15 +73,23 @@ public class TutorsController : ControllerBase
         };
 
         var identityResult = await _userManager.CreateAsync(user, request.Password);
+
+        _logger.LogInformation($"Registration attempt with email: {request.Email}");
+
         if (identityResult.Succeeded)
         {
+            // Respond with JSON including the user ID
             return CreatedAtAction(nameof(GetTutors), new
             {
-                userId = user.Id, // Include the user's ID in the response
+                userId = user.Id,
                 message = "User registered successfully"
             });
         }
-        return BadRequest(identityResult.Errors);
+
+        // Respond with errors in JSON format
+        _logger.LogWarning($"Registration failed for user: {user.UserName}");
+
+        return BadRequest(new { message = "Registration failed", errors = identityResult.Errors });
     }
 
     [HttpPost("login")]
@@ -123,7 +131,13 @@ public class TutorsController : ControllerBase
 
     private string GenerateJwtToken(User user)
     {
-        var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured correctly in appsettings.");
+        // Fetch the JWT key from appsettings.json
+        var jwtKey = _configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey))
+        {
+            throw new InvalidOperationException("JWT Key is not configured correctly in appsettings.");
+        }
+
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
