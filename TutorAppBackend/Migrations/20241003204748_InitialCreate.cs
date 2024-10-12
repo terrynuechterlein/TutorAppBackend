@@ -173,33 +173,33 @@ namespace TutorAppBackend.Migrations
             //             onDelete: ReferentialAction.Cascade);
             //     });
 
-            migrationBuilder.CreateTable(
-                name: "Messages",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    SenderId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ReceiverId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Messages", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Messages_AspNetUsers_ReceiverId",
-                        column: x => x.ReceiverId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Messages_AspNetUsers_SenderId",
-                        column: x => x.SenderId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            // migrationBuilder.CreateTable(
+            //     name: "Messages",
+            //     columns: table => new
+            //     {
+            //         Id = table.Column<int>(type: "int", nullable: false)
+            //             .Annotation("SqlServer:Identity", "1, 1"),
+            //         Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+            //         Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+            //         SenderId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+            //         ReceiverId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+            //     },
+            //     constraints: table =>
+            //     {
+            //         table.PrimaryKey("PK_Messages", x => x.Id);
+            //         table.ForeignKey(
+            //             name: "FK_Messages_AspNetUsers_ReceiverId",
+            //             column: x => x.ReceiverId,
+            //             principalTable: "AspNetUsers",
+            //             principalColumn: "Id",
+            //             onDelete: ReferentialAction.Restrict);
+            //         table.ForeignKey(
+            //             name: "FK_Messages_AspNetUsers_SenderId",
+            //             column: x => x.SenderId,
+            //             principalTable: "AspNetUsers",
+            //             principalColumn: "Id",
+            //             onDelete: ReferentialAction.Cascade);
+            //     });
 
             // migrationBuilder.CreateTable(
             //     name: "Posts",
@@ -222,6 +222,28 @@ namespace TutorAppBackend.Migrations
             //             principalTable: "AspNetUsers",
             //             principalColumn: "Id");
             //     });
+
+            migrationBuilder.CreateTable(
+                name: "Projects",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsOpenToRequests = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatorId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Projects", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Projects_AspNetUsers_CreatorId",
+                        column: x => x.CreatorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
 
             // migrationBuilder.CreateTable(
             //     name: "Subject",
@@ -294,6 +316,30 @@ namespace TutorAppBackend.Migrations
             //             onDelete: ReferentialAction.Restrict);
             //     });
 
+            migrationBuilder.CreateTable(
+                name: "ProjectMembers",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProjectId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProjectMembers", x => new { x.ProjectId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_ProjectMembers_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProjectMembers_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             // migrationBuilder.CreateIndex(
             //     name: "IX_AspNetRoleClaims_RoleId",
             //     table: "AspNetRoleClaims",
@@ -348,26 +394,36 @@ namespace TutorAppBackend.Migrations
             //     table: "Messages",
             //     column: "ReceiverId");
 
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_Messages_SenderId",
+            //     table: "Messages",
+            //     column: "SenderId");
+
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_Posts_UserId",
+            //     table: "Posts",
+            //     column: "UserId");
+
             migrationBuilder.CreateIndex(
-                name: "IX_Messages_SenderId",
-                table: "Messages",
-                column: "SenderId");
+                name: "IX_ProjectMembers_UserId",
+                table: "ProjectMembers",
+                column: "UserId");
 
-        //     migrationBuilder.CreateIndex(
-        //         name: "IX_Posts_UserId",
-        //         table: "Posts",
-        //         column: "UserId");
+            migrationBuilder.CreateIndex(
+                name: "IX_Projects_CreatorId",
+                table: "Projects",
+                column: "CreatorId");
 
-        //     migrationBuilder.CreateIndex(
-        //         name: "IX_Subject_UserId",
-        //         table: "Subject",
-        //         column: "UserId");
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_Subject_UserId",
+            //     table: "Subject",
+            //     column: "UserId");
 
-        //     migrationBuilder.CreateIndex(
-        //         name: "IX_UserUser_FollowingId",
-        //         table: "UserUser",
-        //         column: "FollowingId");
-         }
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_UserUser_FollowingId",
+            //     table: "UserUser",
+            //     column: "FollowingId");
+        }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -390,8 +446,11 @@ namespace TutorAppBackend.Migrations
             // migrationBuilder.DropTable(
             //     name: "Comment");
 
+            // migrationBuilder.DropTable(
+            //     name: "Messages");
+
             migrationBuilder.DropTable(
-                name: "Messages");
+                name: "ProjectMembers");
 
             // migrationBuilder.DropTable(
             //     name: "Subject");
@@ -404,6 +463,9 @@ namespace TutorAppBackend.Migrations
 
             // migrationBuilder.DropTable(
             //     name: "Posts");
+
+            migrationBuilder.DropTable(
+                name: "Projects");
 
             // migrationBuilder.DropTable(
             //     name: "AspNetUsers");

@@ -17,7 +17,9 @@ namespace TutorAppBackend.Models
         public bool IsTutor { get; set; }
         public int ClassYear { get; set; }
         public int Popularity { get; set; }
-        public ICollection<Subject>? Subjects { get; set; } 
+        public ICollection<Subject>? Subjects { get; set; }
+        public ICollection<ProjectMember> ProjectMemberships { get; set; }
+
         public virtual ICollection<User>? Followers { get; set; } 
         public virtual ICollection<User>? Following { get; set; }
         public string? YoutubeUrl { get; set; }

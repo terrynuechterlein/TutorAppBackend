@@ -250,6 +250,51 @@ namespace TutorAppBackend.Migrations
                     b.ToTable("Posts");
                 });
 
+            modelBuilder.Entity("TutorAppBackend.Models.Project", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatorId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsOpenToRequests")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatorId");
+
+                    b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("TutorAppBackend.Models.ProjectMember", b =>
+                {
+                    b.Property<string>("ProjectId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ProjectId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ProjectMembers");
+                });
+
             modelBuilder.Entity("TutorAppBackend.Models.Subject", b =>
                 {
                     b.Property<int>("Id")
@@ -502,6 +547,36 @@ namespace TutorAppBackend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TutorAppBackend.Models.Project", b =>
+                {
+                    b.HasOne("TutorAppBackend.Models.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("TutorAppBackend.Models.ProjectMember", b =>
+                {
+                    b.HasOne("TutorAppBackend.Models.Project", "Project")
+                        .WithMany("Members")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TutorAppBackend.Models.User", "User")
+                        .WithMany("ProjectMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TutorAppBackend.Models.Subject", b =>
                 {
                     b.HasOne("TutorAppBackend.Models.User", null)
@@ -529,8 +604,15 @@ namespace TutorAppBackend.Migrations
                     b.Navigation("Comments");
                 });
 
+            modelBuilder.Entity("TutorAppBackend.Models.Project", b =>
+                {
+                    b.Navigation("Members");
+                });
+
             modelBuilder.Entity("TutorAppBackend.Models.User", b =>
                 {
+                    b.Navigation("ProjectMemberships");
+
                     b.Navigation("Subjects");
                 });
 #pragma warning restore 612, 618

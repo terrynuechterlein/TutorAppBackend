@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Net;
 using System.Diagnostics;
+using TutorAppBackend.Services;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -28,10 +29,11 @@ public class TutorsController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly IConfiguration _configuration;
-    private readonly ILogger<TutorsController> _logger; 
+    private readonly ILogger<TutorsController> _logger;
+    private readonly BlobService _blobService;
 
 
-    public TutorsController(AppDbContext context, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, ILogger<TutorsController> logger)
+    public TutorsController(AppDbContext context, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, ILogger<TutorsController> logger, BlobService blobService)
     {
         _context = context;
         _userManager = userManager;
@@ -39,6 +41,7 @@ public class TutorsController : ControllerBase
         _configuration = configuration;
         _configuration = configuration;
         _logger = logger;
+        _blobService = blobService;
 
     }
 
@@ -325,27 +328,27 @@ public class TutorsController : ControllerBase
         return Ok(new { message = "Initial setup completed successfully." });
     }
 
-    private string GenerateBlobSasToken(string containerName, string blobName)
-    {
-        var blobServiceClient = new BlobServiceClient(_configuration["AzureStorage:ConnectionString"]);
-        var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-        var blobClient = containerClient.GetBlobClient(blobName);
+    //private string GenerateBlobSasToken(string containerName, string blobName)
+    //{
+    //    var blobServiceClient = new BlobServiceClient(_configuration["AzureStorage:ConnectionString"]);
+    //    var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+    //    var blobClient = containerClient.GetBlobClient(blobName);
 
-        var sasBuilder = new BlobSasBuilder
-        {
-            BlobContainerName = containerName,
-            BlobName = blobName,
-            Resource = "b", // b for blob
-            StartsOn = DateTime.UtcNow,
-            ExpiresOn = DateTime.UtcNow.AddHours(24) // Token valid for 24 hours
-        };
+    //    var sasBuilder = new BlobSasBuilder
+    //    {
+    //        BlobContainerName = containerName,
+    //        BlobName = blobName,
+    //        Resource = "b", // b for blob
+    //        StartsOn = DateTime.UtcNow,
+    //        ExpiresOn = DateTime.UtcNow.AddHours(24) // Token valid for 24 hours
+    //    };
 
-        sasBuilder.SetPermissions(BlobSasPermissions.Read);
+    //    sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-        var sasToken = blobClient.GenerateSasUri(sasBuilder).Query;
+    //    var sasToken = blobClient.GenerateSasUri(sasBuilder).Query;
 
-        return $"{blobClient.Uri}{sasToken}";
-    }
+    //    return $"{blobClient.Uri}{sasToken}";
+    //}
 
 
     [HttpGet("{id}/profileImage")]
@@ -364,7 +367,7 @@ public class TutorsController : ControllerBase
 
         var uri = new Uri(user.ProfilePictureUrl);
         var blobName = Path.GetFileName(uri.LocalPath);
-        var sasUrl = GenerateBlobSasToken("profileimages", blobName);
+        var sasUrl = _blobService.GenerateBlobSasToken("profileimages", blobName);
 
         return Ok(new { imageUrl = sasUrl });
     }
@@ -385,7 +388,7 @@ public class TutorsController : ControllerBase
 
         var uri = new Uri(user.BannerImageUrl);
         var blobName = Path.GetFileName(uri.LocalPath);
-        var sasUrl = GenerateBlobSasToken("bannerimages", blobName);
+        var sasUrl = _blobService.GenerateBlobSasToken("bannerimages", blobName);
 
         return Ok(new { imageUrl = sasUrl });
     }
@@ -505,13 +508,12 @@ public class TutorsController : ControllerBase
             FirstName = user.FirstName,
             LastName = user.LastName,
             UserName = user.UserName,
-            ProfilePictureUrl = user.ProfilePictureUrl != null ? GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(user.ProfilePictureUrl).LocalPath)) : null,
-            BannerImageUrl = user.BannerImageUrl != null ? GenerateBlobSasToken("bannerimages", Path.GetFileName(new Uri(user.BannerImageUrl).LocalPath)) : null,
+            ProfilePictureUrl = user.ProfilePictureUrl != null ? _blobService.GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(user.ProfilePictureUrl).LocalPath)) : null,
+            BannerImageUrl = user.BannerImageUrl != null ? _blobService.GenerateBlobSasToken("bannerimages", Path.GetFileName(new Uri(user.BannerImageUrl).LocalPath)) : null,
             School = user.School,
             Grade = user.Grade,
             Major = user.Major,
             Bio = user.Bio,
-            // FollowersCount and FollowingCount can be added here if needed
         }).ToList();
 
         return Ok(usersWithSasTokens);

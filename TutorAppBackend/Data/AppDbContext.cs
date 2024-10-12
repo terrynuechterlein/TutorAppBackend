@@ -15,7 +15,8 @@ namespace TutorAppBackend.Data
 
         public DbSet<Comment> Comment { get; set; }
 
-
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<ProjectMember> ProjectMembers { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -38,6 +39,22 @@ namespace TutorAppBackend.Data
                 .WithMany()
                 .HasForeignKey(m => m.ReceiverId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure many-to-many relationship between Project and User via ProjectMember
+            modelBuilder.Entity<ProjectMember>()
+                .HasKey(pm => new { pm.ProjectId, pm.UserId }); // Composite primary key
+
+            modelBuilder.Entity<ProjectMember>()
+                .HasOne(pm => pm.Project)
+                .WithMany(p => p.Members)
+                .HasForeignKey(pm => pm.ProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProjectMember>()
+                .HasOne(pm => pm.User)
+                .WithMany(u => u.ProjectMemberships)
+                .HasForeignKey(pm => pm.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Configure the relationship for Comment -> User
             modelBuilder.Entity<Comment>()
