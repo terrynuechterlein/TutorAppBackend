@@ -519,6 +519,39 @@ public class TutorsController : ControllerBase
         return Ok(usersWithSasTokens);
     }
 
+    // PUT: api/tutors/{id}/confirmTutor
+    [HttpPut("{id}/confirmTutor")]
+    public async Task<IActionResult> ConfirmTutor(string id, [FromQuery] string secret)
+    {
+        if (secret != _configuration["MicroserviceSecret"])
+        {
+            return Unauthorized();
+        }
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        user.IsTutor = true;
+        await _userManager.UpdateAsync(user);
+        return Ok(new { message = "User is now a tutor." });
+    }
+
+    // GET: api/tutors/{id}/isTutor
+    [HttpGet("{id}/isTutor")]
+    public async Task<IActionResult> IsTutor(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        return Ok(new { isTutor = user.IsTutor });
+    }
+
+
 
 
 
