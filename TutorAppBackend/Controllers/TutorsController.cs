@@ -21,6 +21,7 @@ using System.Net;
 using System.Diagnostics;
 using TutorAppBackend.Services;
 
+
 [ApiController]
 [Route("api/[controller]")]
 public class TutorsController : ControllerBase
@@ -38,7 +39,6 @@ public class TutorsController : ControllerBase
         _context = context;
         _userManager = userManager;
         _signInManager = signInManager;
-        _configuration = configuration;
         _configuration = configuration;
         _logger = logger;
         _blobService = blobService;
@@ -215,7 +215,7 @@ public class TutorsController : ControllerBase
 
         if (profileImage != null && profileImage.Length > 0)
         {
-            var imageUrl = await SaveImageToAzureBlob(profileImage, "profileimages");
+            var imageUrl = await _blobService.SaveFileToAzureBlob(profileImage, "ContainerName");
             user.ProfilePictureUrl = imageUrl;
             _context.Update(user);
             await _context.SaveChangesAsync();
@@ -238,8 +238,8 @@ public class TutorsController : ControllerBase
 
         if (bannerImage != null && bannerImage.Length > 0)
         {
-            var imageUrl = await SaveImageToAzureBlob(bannerImage, "bannerimages");
-            user.BannerImageUrl = imageUrl; 
+            var imageUrl = await _blobService.SaveFileToAzureBlob(bannerImage, "BannerContainerName");
+            user.BannerImageUrl = imageUrl;
             _context.Update(user);
             await _context.SaveChangesAsync();
 
@@ -248,6 +248,7 @@ public class TutorsController : ControllerBase
 
         return BadRequest("Invalid image file");
     }
+
 
     private async Task<string> SaveImageToAzureBlob(IFormFile imageFile, string containerName)
     {
@@ -367,7 +368,7 @@ public class TutorsController : ControllerBase
 
         var uri = new Uri(user.ProfilePictureUrl);
         var blobName = Path.GetFileName(uri.LocalPath);
-        var sasUrl = _blobService.GenerateBlobSasToken("profileimages", blobName);
+        var sasUrl = _blobService.GenerateBlobSasToken("ContainerName", blobName);
 
         return Ok(new { imageUrl = sasUrl });
     }
@@ -388,7 +389,7 @@ public class TutorsController : ControllerBase
 
         var uri = new Uri(user.BannerImageUrl);
         var blobName = Path.GetFileName(uri.LocalPath);
-        var sasUrl = _blobService.GenerateBlobSasToken("bannerimages", blobName);
+        var sasUrl = _blobService.GenerateBlobSasToken("BannerContainerName", blobName);
 
         return Ok(new { imageUrl = sasUrl });
     }
@@ -508,8 +509,8 @@ public class TutorsController : ControllerBase
             FirstName = user.FirstName,
             LastName = user.LastName,
             UserName = user.UserName,
-            ProfilePictureUrl = user.ProfilePictureUrl != null ? _blobService.GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(user.ProfilePictureUrl).LocalPath)) : null,
-            BannerImageUrl = user.BannerImageUrl != null ? _blobService.GenerateBlobSasToken("bannerimages", Path.GetFileName(new Uri(user.BannerImageUrl).LocalPath)) : null,
+            ProfilePictureUrl = user.ProfilePictureUrl != null ? _blobService.GenerateBlobSasToken("ContainerName", Path.GetFileName(new Uri(user.ProfilePictureUrl).LocalPath)) : null,
+            BannerImageUrl = user.BannerImageUrl != null ? _blobService.GenerateBlobSasToken("BannerContainerName", Path.GetFileName(new Uri(user.BannerImageUrl).LocalPath)) : null,
             School = user.School,
             Grade = user.Grade,
             Major = user.Major,
@@ -551,8 +552,183 @@ public class TutorsController : ControllerBase
         return Ok(new { isTutor = user.IsTutor });
     }
 
+    [HttpPut("{id}/uploadResume")]
+    public async Task<IActionResult> UploadResume(string id, [FromForm] IFormFile file)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        if (file != null && file.Length > 0)
+        {
+            try
+            {
+                var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/jpg" };
+                if (!allowedContentTypes.Contains(file.ContentType.ToLower()))
+                {
+                    return BadRequest("Only image files (JPEG, PNG) are allowed.");
+                }
+
+                // Use the container name key instead of hardcoding
+                var resumeUrl = await _blobService.SaveFileToAzureBlob(file, "ResumeContainerName");
+                user.ResumeUrl = resumeUrl;
+                _context.Update(user);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Resume uploaded successfully.", resumeUrl });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error uploading resume for user {id}: {ex.Message}");
+                return StatusCode(500, "An error occurred while uploading the resume.");
+            }
+        }
+
+        return BadRequest("Invalid file.");
+    }
+
+    [HttpGet("{id}/resume")]
+    public async Task<IActionResult> GetResume(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrEmpty(user.ResumeUrl))
+        {
+            return Ok(new { resumeUrl = "" });
+        }
+
+        var uri = new Uri(user.ResumeUrl);
+        var blobName = Path.GetFileName(uri.LocalPath);
+
+        // Use the container name key instead of hardcoding
+        var sasUrl = _blobService.GenerateBlobSasToken("ResumeContainerName", blobName);
+
+        return Ok(new { resumeUrl = sasUrl });
+    }
 
 
+    // POST: api/tutors/{id}/services
+    [HttpPost("{id}/services")]
+    public async Task<IActionResult> CreateService(string id, [FromBody] CreateServiceRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var service = new Service
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Price = request.Price,
+            UserId = id,
+            Tiers = new List<ServiceTier>()
+        };
+
+        if (request.Tiers != null && request.Tiers.Any())
+        {
+            foreach (var tier in request.Tiers)
+            {
+                service.Tiers.Add(new ServiceTier
+                {
+                    Title = tier.Title,
+                    Price = tier.Price
+                });
+            }
+        }
+
+        _context.Services.Add(service);
+        await _context.SaveChangesAsync();
+
+        var serviceDto = new ServiceDTO
+        {
+            Id = service.Id,
+            Title = service.Title,
+            Description = service.Description,
+            Price = service.Price,
+            Tiers = service.Tiers.Select(t => new ServiceTierDTO
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Price = t.Price
+            }).ToList()
+        };
+
+        return CreatedAtAction(nameof(GetService), new { serviceId = service.Id }, serviceDto);
+    }
+
+    // GET: api/tutors/{id}/services
+    [HttpGet("{id}/services")]
+    public async Task<IActionResult> GetServices(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var services = await _context.Services
+            .Where(s => s.UserId == id)
+            .Include(s => s.Tiers)
+            .ToListAsync();
+
+        var serviceDtos = services.Select(s => new ServiceDTO
+        {
+            Id = s.Id,
+            Title = s.Title,
+            Description = s.Description,
+            Price = s.Price,
+            Tiers = s.Tiers.Select(t => new ServiceTierDTO
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Price = t.Price
+            }).ToList()
+        }).ToList();
+
+        return Ok(serviceDtos);
+    }
+
+    // GET: api/tutors/services/{serviceId}
+    [HttpGet("services/{serviceId}")]
+    public async Task<IActionResult> GetService(int serviceId)
+    {
+        var service = await _context.Services
+            .Include(s => s.Tiers)
+            .FirstOrDefaultAsync(s => s.Id == serviceId);
+
+        if (service == null)
+        {
+            return NotFound("Service not found.");
+        }
+
+        var serviceDto = new ServiceDTO
+        {
+            Id = service.Id,
+            Title = service.Title,
+            Description = service.Description,
+            Price = service.Price,
+            Tiers = service.Tiers.Select(t => new ServiceTierDTO
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Price = t.Price
+            }).ToList()
+        };
+
+        return Ok(serviceDto);
+    }
 
 }

@@ -76,7 +76,7 @@ public class ProjectsController : ControllerBase
                 Id = p.Creator.Id,
                 UserName = p.Creator.UserName,
                 ProfilePictureUrl = !string.IsNullOrEmpty(p.Creator.ProfilePictureUrl)
-                    ? _blobService.GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(p.Creator.ProfilePictureUrl).LocalPath))
+                    ? _blobService.GenerateBlobSasToken("ContainerName", Path.GetFileName(new Uri(p.Creator.ProfilePictureUrl).LocalPath))
                     : null
             },
             Members = p.Members.Select(pm => new UserDto
@@ -84,10 +84,12 @@ public class ProjectsController : ControllerBase
                 Id = pm.User.Id,
                 UserName = pm.User.UserName,
                 ProfilePictureUrl = !string.IsNullOrEmpty(pm.User.ProfilePictureUrl)
-                    ? _blobService.GenerateBlobSasToken("profileimages", Path.GetFileName(new Uri(pm.User.ProfilePictureUrl).LocalPath))
+                    ? _blobService.GenerateBlobSasToken("ContainerName", Path.GetFileName(new Uri(pm.User.ProfilePictureUrl).LocalPath))
                     : null
             }).ToList()
         }).ToList();
+
+
 
         return Ok(projectDtos);
     }

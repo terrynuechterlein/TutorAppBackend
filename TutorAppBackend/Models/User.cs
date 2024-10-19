@@ -26,7 +26,11 @@ namespace TutorAppBackend.Models
         public string? TwitchUrl { get; set; }
         public string? DiscordUrl {  get; set; }    
         public string? LinkedInUrl { get; set; }
-        public bool IsSetupComplete { get; set; } = false; 
+        public bool IsSetupComplete { get; set; } = false;
+
+        public string? ResumeUrl { get; set; }
+        public ICollection<Service> Services { get; set; }
+
 
 
     }

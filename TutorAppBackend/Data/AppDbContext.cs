@@ -17,6 +17,8 @@ namespace TutorAppBackend.Data
 
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectMember> ProjectMembers { get; set; }
+        public DbSet<Service> Services { get; set; }
+        public DbSet<ServiceTier> ServiceTiers { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -69,6 +71,14 @@ namespace TutorAppBackend.Data
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
                 .OnDelete(DeleteBehavior.Restrict); // Restrict cascading deletes
+
+            modelBuilder.Entity<Service>()
+                .HasMany(s => s.Tiers)
+                .WithOne(t => t.Service)
+                .HasForeignKey(t => t.ServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
         }
 
     }

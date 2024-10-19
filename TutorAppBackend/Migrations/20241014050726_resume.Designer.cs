@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TutorAppBackend.Data;
 
@@ -11,9 +12,11 @@ using TutorAppBackend.Data;
 namespace TutorAppBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241014050726_resume")]
+    partial class resume
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -293,61 +296,6 @@ namespace TutorAppBackend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ProjectMembers");
-                });
-
-            modelBuilder.Entity("TutorAppBackend.Models.Service", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Services");
-                });
-
-            modelBuilder.Entity("TutorAppBackend.Models.ServiceTier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("ServiceTiers");
                 });
 
             modelBuilder.Entity("TutorAppBackend.Models.Subject", b =>
@@ -635,28 +583,6 @@ namespace TutorAppBackend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TutorAppBackend.Models.Service", b =>
-                {
-                    b.HasOne("TutorAppBackend.Models.User", "User")
-                        .WithMany("Services")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("TutorAppBackend.Models.ServiceTier", b =>
-                {
-                    b.HasOne("TutorAppBackend.Models.Service", "Service")
-                        .WithMany("Tiers")
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Service");
-                });
-
             modelBuilder.Entity("TutorAppBackend.Models.Subject", b =>
                 {
                     b.HasOne("TutorAppBackend.Models.User", null)
@@ -689,16 +615,9 @@ namespace TutorAppBackend.Migrations
                     b.Navigation("Members");
                 });
 
-            modelBuilder.Entity("TutorAppBackend.Models.Service", b =>
-                {
-                    b.Navigation("Tiers");
-                });
-
             modelBuilder.Entity("TutorAppBackend.Models.User", b =>
                 {
                     b.Navigation("ProjectMemberships");
-
-                    b.Navigation("Services");
 
                     b.Navigation("Subjects");
                 });
