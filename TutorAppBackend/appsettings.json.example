@@ -1,1 +1,25 @@
-﻿
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "TutorAppDbConnection": ""
+  },
+  "Jwt": {
+    "Issuer": "MyTutorApp",
+    "Audience": "TutorAppUsers",
+    "Key": ""
+  },
+  "AzureStorage": {
+    "ConnectionString": "",
+    "ContainerName": "profileimages",
+    "BannerContainerName": "bannerimages",
+    "ResumeContainerName": "resumeimages"
+  },
+  "MicroserviceSecret": ""
+}
