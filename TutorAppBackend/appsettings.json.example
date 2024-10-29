@@ -8,18 +8,18 @@
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "TutorAppDbConnection": ""
+    "TutorAppDbConnection": "Your_Connection_String"
   },
   "Jwt": {
     "Issuer": "MyTutorApp",
     "Audience": "TutorAppUsers",
-    "Key": ""
+    "Key": "Your_JWT_Key"
   },
   "AzureStorage": {
-    "ConnectionString": "",
+    "ConnectionString": "Your_Azure_Connection_String",
     "ContainerName": "profileimages",
     "BannerContainerName": "bannerimages",
     "ResumeContainerName": "resumeimages"
   },
-  "MicroserviceSecret": ""
+  "MicroserviceSecret": "Your_Microservice_Secret"
 }

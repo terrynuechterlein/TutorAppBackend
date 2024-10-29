@@ -1,6 +1,17 @@
-﻿# ASP.NET Core
+﻿# ASP.NET Core Configuration Files
 **/appsettings.json
 **/appsettings.*.json
 
-# User secrets
+# User Secrets
 **/secrets.json
+
+# Build Folders
+bin/
+obj/
+
+# Visual Studio Files
+*.user
+*.suo
+
+# Others
+*.lock.json

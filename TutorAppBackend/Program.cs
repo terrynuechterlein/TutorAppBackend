@@ -9,9 +9,11 @@ using TutorAppBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure appsettings.json, environment variables, and user secrets
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddEnvironmentVariables();
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>(); // Add this line to include User Secrets
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -32,7 +34,7 @@ builder.Services.AddDefaultIdentity<User>(options =>
 })
     .AddEntityFrameworkStores<AppDbContext>();
 
-//Configure JWT Authentication
+// Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -40,11 +42,9 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-
-    // Fetch the JWT key from environment variables directly
-    var jwtKey = Environment.GetEnvironmentVariable("Jwt_Key")
+    // Fetch the JWT key from User Secrets or environment variables
+    var jwtKey = builder.Configuration["Jwt:Key"]
                  ?? throw new InvalidOperationException("JWT Key is not configured properly.");
-
 
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -61,13 +61,14 @@ builder.Services.AddAuthentication(options =>
 // Register the BlobService
 builder.Services.AddSingleton<BlobService>();
 
+// Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
+    options.AddDefaultPolicy(policyBuilder =>
     {
-        builder.WithOrigins("http://192.168.1.54:8081") 
-               .AllowAnyMethod()
-               .AllowAnyHeader();
+        policyBuilder.WithOrigins("http://192.168.1.54:8081")
+                     .AllowAnyMethod()
+                     .AllowAnyHeader();
     });
 });
 
@@ -80,7 +81,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-//app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -92,6 +93,5 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapControllers();
-
 
 app.Run("http://0.0.0.0:5016");
