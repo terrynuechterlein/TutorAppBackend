@@ -45,8 +45,6 @@ builder.Services.AddAuthentication(options =>
     var jwtKey = Environment.GetEnvironmentVariable("Jwt_Key")
                  ?? throw new InvalidOperationException("JWT Key is not configured properly.");
 
-    // Ensure you log the key to confirm it's loaded (for debugging only)
-    Console.WriteLine($"JWT Key: {jwtKey}");
 
     options.TokenValidationParameters = new TokenValidationParameters
     {

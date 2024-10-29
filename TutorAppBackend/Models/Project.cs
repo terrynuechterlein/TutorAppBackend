@@ -12,8 +12,6 @@ namespace TutorAppBackend.Models
         public string Description { get; set; }
         public bool IsOpenToRequests { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // Navigation properties
         public string CreatorId { get; set; }
         public User Creator { get; set; }
         public ICollection<ProjectMember> Members { get; set; }

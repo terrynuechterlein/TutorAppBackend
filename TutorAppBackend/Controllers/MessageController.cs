@@ -8,6 +8,7 @@ using TutorAppBackend.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using TutorAppBackend.Services;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,11 +17,12 @@ public class MessagesController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly UserManager<User> _userManager;
-
-    public MessagesController(AppDbContext context, UserManager<User> userManager)
+    private readonly BlobService _blobService;
+    public MessagesController(AppDbContext context, UserManager<User> userManager, BlobService blobService)
     {
         _context = context;
         _userManager = userManager;
+        _blobService = blobService;
     }
 
     // POST: api/messages
@@ -92,6 +94,18 @@ public class MessagesController : ControllerBase
         return Ok(messages);
     }
 
+    private string GenerateSasUrl(string blobUrl)
+    {
+        if (string.IsNullOrEmpty(blobUrl))
+            return null;
+
+        var uri = new Uri(blobUrl);
+        var blobName = Path.GetFileName(uri.LocalPath);
+        var sasUrl = _blobService.GenerateBlobSasToken("ContainerName", blobName);
+        return sasUrl;
+    }
+
+
     // GET: api/messages/conversations
     [HttpGet("conversations")]
     public async Task<ActionResult<IEnumerable<ConversationDto>>> GetConversations()
@@ -122,7 +136,7 @@ public class MessagesController : ControllerBase
                 UserName = g.First().OtherUser.UserName,
                 FirstName = g.First().OtherUser.FirstName,
                 LastName = g.First().OtherUser.LastName,
-                ProfilePictureUrl = g.First().OtherUser.ProfilePictureUrl,
+                ProfilePictureUrl = GenerateSasUrl(g.First().OtherUser.ProfilePictureUrl),
                 LastMessage = g.OrderByDescending(m => m.Message.Timestamp).First().Message.Content,
                 Timestamp = g.OrderByDescending(m => m.Message.Timestamp).First().Message.Timestamp
             })
@@ -132,6 +146,7 @@ public class MessagesController : ControllerBase
         return Ok(conversations);
     }
 }
+
 
 public class SendMessageRequest
 {

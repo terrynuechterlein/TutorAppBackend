@@ -19,7 +19,6 @@ namespace TutorAppBackend.Models
         public int Popularity { get; set; }
         public ICollection<Subject>? Subjects { get; set; }
         public ICollection<ProjectMember> ProjectMemberships { get; set; }
-
         public virtual ICollection<User>? Followers { get; set; } 
         public virtual ICollection<User>? Following { get; set; }
         public string? YoutubeUrl { get; set; }
@@ -27,11 +26,7 @@ namespace TutorAppBackend.Models
         public string? DiscordUrl {  get; set; }    
         public string? LinkedInUrl { get; set; }
         public bool IsSetupComplete { get; set; } = false;
-
         public string? ResumeUrl { get; set; }
         public ICollection<Service> Services { get; set; }
-
-
-
     }
 }

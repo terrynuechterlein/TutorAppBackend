@@ -329,29 +329,6 @@ public class TutorsController : ControllerBase
         return Ok(new { message = "Initial setup completed successfully." });
     }
 
-    //private string GenerateBlobSasToken(string containerName, string blobName)
-    //{
-    //    var blobServiceClient = new BlobServiceClient(_configuration["AzureStorage:ConnectionString"]);
-    //    var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-    //    var blobClient = containerClient.GetBlobClient(blobName);
-
-    //    var sasBuilder = new BlobSasBuilder
-    //    {
-    //        BlobContainerName = containerName,
-    //        BlobName = blobName,
-    //        Resource = "b", // b for blob
-    //        StartsOn = DateTime.UtcNow,
-    //        ExpiresOn = DateTime.UtcNow.AddHours(24) // Token valid for 24 hours
-    //    };
-
-    //    sasBuilder.SetPermissions(BlobSasPermissions.Read);
-
-    //    var sasToken = blobClient.GenerateSasUri(sasBuilder).Query;
-
-    //    return $"{blobClient.Uri}{sasToken}";
-    //}
-
-
     [HttpGet("{id}/profileImage")]
     public async Task<IActionResult> GetProfileImageUrl(string id)
     {
@@ -453,9 +430,6 @@ public class TutorsController : ControllerBase
             [FromQuery] string searchQuery = null) 
 
     {
-        // Log the received filter parameters for debugging
-        _logger.LogInformation($"Received filter parameters. College: {string.Join(", ", college)}, Grade: {string.Join(", ", grade)}, Major: {string.Join(", ", major)}");
-
         var query = _context.Users.AsQueryable();
 
         // Filter by college if provided
@@ -476,7 +450,7 @@ public class TutorsController : ControllerBase
             query = query.Where(user => major.Contains(user.Major));
         }
 
-        // New filtering logic for searchQuery
+        // searchQuery
         if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             query = query.Where(user =>
@@ -486,8 +460,6 @@ public class TutorsController : ControllerBase
 
         }
 
-
-        // Fetch the users without generating SAS tokens
         var users = query.Select(user => new
         {
             user.Id,
@@ -571,12 +543,10 @@ public class TutorsController : ControllerBase
                     return BadRequest("Only image files (JPEG, PNG) are allowed.");
                 }
 
-                // Use the container name key instead of hardcoding
                 var resumeUrl = await _blobService.SaveFileToAzureBlob(file, "ResumeContainerName");
                 user.ResumeUrl = resumeUrl;
                 _context.Update(user);
                 await _context.SaveChangesAsync();
-
                 return Ok(new { message = "Resume uploaded successfully.", resumeUrl });
             }
             catch (Exception ex)
@@ -585,7 +555,6 @@ public class TutorsController : ControllerBase
                 return StatusCode(500, "An error occurred while uploading the resume.");
             }
         }
-
         return BadRequest("Invalid file.");
     }
 
@@ -605,13 +574,10 @@ public class TutorsController : ControllerBase
 
         var uri = new Uri(user.ResumeUrl);
         var blobName = Path.GetFileName(uri.LocalPath);
-
-        // Use the container name key instead of hardcoding
         var sasUrl = _blobService.GenerateBlobSasToken("ResumeContainerName", blobName);
 
         return Ok(new { resumeUrl = sasUrl });
     }
-
 
     // POST: api/tutors/{id}/services
     [HttpPost("{id}/services")]
@@ -632,7 +598,6 @@ public class TutorsController : ControllerBase
         {
             Title = request.Title,
             Description = request.Description,
-            Price = request.Price,
             UserId = id,
             Tiers = new List<ServiceTier>()
         };
@@ -644,6 +609,7 @@ public class TutorsController : ControllerBase
                 service.Tiers.Add(new ServiceTier
                 {
                     Title = tier.Title,
+                    Description = tier.Description,
                     Price = tier.Price
                 });
             }
@@ -657,11 +623,11 @@ public class TutorsController : ControllerBase
             Id = service.Id,
             Title = service.Title,
             Description = service.Description,
-            Price = service.Price,
             Tiers = service.Tiers.Select(t => new ServiceTierDTO
             {
                 Id = t.Id,
                 Title = t.Title,
+                Description = t.Description,
                 Price = t.Price
             }).ToList()
         };
@@ -689,11 +655,11 @@ public class TutorsController : ControllerBase
             Id = s.Id,
             Title = s.Title,
             Description = s.Description,
-            Price = s.Price,
             Tiers = s.Tiers.Select(t => new ServiceTierDTO
             {
                 Id = t.Id,
                 Title = t.Title,
+                Description = t.Description,
                 Price = t.Price
             }).ToList()
         }).ToList();
@@ -719,16 +685,43 @@ public class TutorsController : ControllerBase
             Id = service.Id,
             Title = service.Title,
             Description = service.Description,
-            Price = service.Price,
             Tiers = service.Tiers.Select(t => new ServiceTierDTO
             {
                 Id = t.Id,
                 Title = t.Title,
+                Description = t.Description,
                 Price = t.Price
             }).ToList()
         };
 
         return Ok(serviceDto);
     }
+
+    // DELETE: api/tutors/{id}/services/{serviceId}
+    [HttpDelete("{id}/services/{serviceId}")]
+    public async Task<IActionResult> DeleteService(string id, int serviceId)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        var service = await _context.Services
+            .Include(s => s.Tiers)
+            .FirstOrDefaultAsync(s => s.Id == serviceId && s.UserId == id);
+
+        if (service == null)
+        {
+            return NotFound("Service not found.");
+        }
+
+        _context.Services.Remove(service);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Service deleted successfully." });
+    }
+
+
 
 }

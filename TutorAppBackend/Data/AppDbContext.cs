@@ -8,18 +8,13 @@ namespace TutorAppBackend.Data
     {
         public DbSet<User> User { get; set; }
         public DbSet<Subject> Subject { get; set; }
-
         public DbSet<Post> Posts { get; set; }
-
         public DbSet<Message> Message { get; set; }
-
         public DbSet<Comment> Comment { get; set; }
-
         public DbSet<Project> Projects { get; set; }
         public DbSet<ProjectMember> ProjectMembers { get; set; }
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceTier> ServiceTiers { get; set; }
-
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
